@@ -13,3 +13,18 @@ steps:
 
   - script: dotnet build HelloWorld/HelloWorld.csproj
     displayName: Build HelloWorld
+
+  - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
+    displayName: Publish application
+
+  - task: UniversalPackages@0
+    displayName: Upload to Azure Artifacts
+    inputs:
+      command: publish
+      publishDirectory: '$(Build.ArtifactStagingDirectory)'
+      feedsToUsePublish: internal
+      vstsFeedPublish: 'Azure Project/helloworld-feed'
+      vstsFeedPackagePublish: helloworld
+      versionOption: custom
+      versionPublish: '1.0.$(Build.BuildId)'
+      packagePublishDescription: 'HelloWorld application'
