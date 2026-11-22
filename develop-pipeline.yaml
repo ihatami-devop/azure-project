@@ -1,0 +1,9 @@
+trigger:
+  - develop
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:    
+  - script: 'echo "Pipeline working"'
+    displayName: Print pipeline
