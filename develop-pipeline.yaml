@@ -5,7 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-  - task: SonarCloudPrepare@4
+  - task: SonarCloudPrepare@4.4.0
     inputs:
       SonarCloud: 'sonarqube'
       organization: 'ihatami-devop'
@@ -21,11 +21,11 @@ steps:
     displayName: Build HelloWorld
 
     # Execute SonarQube analysis
-  - task: SonarCloudAnalyze@4
+  - task: SonarCloudAnalyze@4.4.0
     displayName: Run SonarQube analysis
 
   # Publish Quality Gate result
-  - task: SonarCloudPublish@4
+  - task: SonarCloudPublish@4.4.0
     displayName: Publish Quality Gate
     inputs:
       pollingTimeoutSec: '300'
