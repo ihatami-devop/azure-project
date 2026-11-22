@@ -7,7 +7,7 @@ pool:
 steps:
   - task: SonarCloudPrepare@4
     inputs:
-      SonarCloud: 'SonarQubeCloud'
+      SonarCloud: 'sonarqube'
       organization: 'ihatami-devop'
       scannerMode: 'dotnet'
       projectKey: 'ihatami-devop_azure-project'
