@@ -7,6 +7,7 @@ pool:
 
 variables:
   version: '1.0.$(Build.BuildId)'
+  artifactName: '$(Build.SourceBranchName)_$(version)'
 
 steps:
   - task: SonarCloudPrepare@4.4.0
@@ -57,7 +58,13 @@ steps:
     inputs:
       pollingTimeoutSec: '300'
 
-  - script: dotnet pack HelloWorld/HelloWorld.csproj -c Release --no-build -p:PackageVersion=$(version) -o $(Build.ArtifactStagingDirectory)
+  - script: |
+      dotnet pack HelloWorld/HelloWorld.csproj \
+        -c Release \
+        --no-build \
+        -p:PackageVersion=$(version) \
+        -p:PackageId=$(artifactName) \
+        -o $(Build.ArtifactStagingDirectory)
     displayName: Generate NuGet package
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   
