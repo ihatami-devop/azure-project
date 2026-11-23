@@ -17,12 +17,24 @@ steps:
       organization: 'ihatami-devop'
       scannerMode: 'dotnet'
       projectKey: 'ihatami-devop_azure-project'
+      extraProperties: |
+        sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/TestResults/**/coverage.opencover.xml
       
   - script: dotnet restore HelloWorld/HelloWorld.csproj
     displayName: Install dependencies
 
   - script: dotnet build HelloWorld/HelloWorld.csproj -c Release
     displayName: Build HelloWorld
+
+    # DEVELOP: Run tests and generate coverage
+  - script: |
+      dotnet test HelloWorld.Tests/HelloWorld.Tests.csproj \
+        -c Release \
+        --collect:"XPlat Code Coverage" \
+        --results-directory "$(Agent.TempDirectory)/TestResults" \
+        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+    displayName: Run tests and generate code coverage
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
 
   - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
     displayName: Publish application
