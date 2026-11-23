@@ -30,8 +30,6 @@ steps:
         
   - script: 'echo "Application version: $(version)"'
     displayName: Print application version
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-
 
   - task: UniversalPackages@0
     displayName: Upload to Azure Artifacts
