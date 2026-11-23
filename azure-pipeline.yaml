@@ -1,27 +1,57 @@
 trigger:
   - main
+  - develop
 
 pool:
   vmImage: ubuntu-latest
 
 variables:
   version: '1.0.$(Build.BuildId)'
+  artifactName: '$(Build.SourceBranchName)_$(version)'
 
 steps:
+    # Static testing
+  - script: |
+      set -eou pipefail
+      dotnet format HelloWorld/HelloWorld.csproj --verify-no-changes --no-restore
+    displayName: Fast static code formatting check
+
+  - task: SonarCloudPrepare@4.4.0
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    inputs:
+      SonarCloud: 'sonarqube'
+      organization: 'ihatami-devop'
+      scannerMode: 'dotnet'
+      projectKey: 'ihatami-devop_azure-project'
+      extraProperties: |
+        sonar.cs.opencover.reportsPaths=$(Agent.TempDirectory)/TestResults/**/coverage.opencover.xml
+      
   - script: dotnet restore HelloWorld/HelloWorld.csproj
     displayName: Install dependencies
 
-  - script: dotnet build HelloWorld/HelloWorld.csproj
+  - script: dotnet build HelloWorld/HelloWorld.csproj -c Release
     displayName: Build HelloWorld
+
+    # Run tests and generate coverage
+  - script: |
+      dotnet test HelloWorld.Tests/HelloWorld.Tests.csproj \
+        -c Release \
+        --collect:"XPlat Code Coverage" \
+        --results-directory "$(Agent.TempDirectory)/TestResults" \
+        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+    displayName: Run tests and generate code coverage
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
 
   - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
     displayName: Publish application
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
         
   - script: 'echo "Application version: $(version)"'
     displayName: Print application version
 
   - task: UniversalPackages@0
     displayName: Upload to Azure Artifacts
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     inputs:
       command: publish
       publishDirectory: '$(Build.ArtifactStagingDirectory)'
@@ -31,3 +61,38 @@ steps:
       versionOption: custom
       versionPublish: '$(version)'
       packagePublishDescription: 'HelloWorld application'
+
+    # Execute SonarQube analysis
+  - task: SonarCloudAnalyze@4.4.0
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    displayName: Run SonarQube analysis
+
+  # Publish Quality Gate result
+  - task: SonarCloudPublish@4.4.0
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    displayName: Publish Quality Gate
+    inputs:
+      pollingTimeoutSec: '300'
+
+  - script: |
+      dotnet pack HelloWorld/HelloWorld.csproj \
+        -c Release \
+        --no-build \
+        -p:PackageVersion=$(version) \
+        -p:PackageId=$(artifactName) \
+        -o $(Build.ArtifactStagingDirectory)
+    displayName: Generate NuGet package
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  
+  # Authenticate with Azure Artifacts
+  - task: NuGetAuthenticate@1
+    displayName: Authenticate with Azure Artifacts
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+
+  # Publish NuGet package
+  - script: |
+      dotnet nuget push "$(Build.ArtifactStagingDirectory)"/*.nupkg \
+        --api-key az \
+        --source "https://pkgs.dev.azure.com/ilayhatami21/732f36f8-5b4f-40a0-aaba-157480067b66/_packaging/helloworld-feed/nuget/v3/index.json"
+    displayName: Publish NuGet package
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
