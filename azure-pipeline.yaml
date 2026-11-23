@@ -61,11 +61,15 @@ steps:
     displayName: Generate NuGet package
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   
-  - task: NuGetCommand@2
+# Authenticate with Azure Artifacts
+  - task: NuGetAuthenticate@1
+    displayName: Authenticate with Azure Artifacts
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+
+# Push NuGet package
+  - script: |
+      dotnet nuget push "$(Build.ArtifactStagingDirectory)"/*.nupkg \
+        --api-key AzureArtifacts \
+        --source "https://pkgs.dev.azure.com/ihatami-devop/Azure%20Project/_packaging/helloworld-feed/nuget/v3/index.json"
     displayName: Publish NuGet package
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
-    inputs:
-      command: push
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
-      nuGetFeedType: internal
-      publishVstsFeed: 'Azure Project/helloworld-feed'
