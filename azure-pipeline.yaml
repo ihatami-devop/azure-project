@@ -9,21 +9,23 @@ variables:
   version: '1.0.$(Build.BuildId)'
 
 steps:
-  - script: dotnet restore HelloWorld.sln
-    displayName: Donwload dependencies
+  - script: dotnet restore HelloWorld/HelloWorld.csproj
+    displayName: Install dependencies
 
-  # Build application
-  - script: dotnet build HelloWorld.sln
+  - script: dotnet build HelloWorld/HelloWorld.csproj
     displayName: Build HelloWorld
 
-  # MAIN: Publish application
   - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
     displayName: Publish application
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+        
+  - script: 'echo "Application version: $(version)"'
+    displayName: Print application version
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
 
-  # MAIN: Publish Universal Package
+
   - task: UniversalPackages@0
-    displayName: Upload Universal Package
+    displayName: Upload to Azure Artifacts
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     inputs:
       command: publish
