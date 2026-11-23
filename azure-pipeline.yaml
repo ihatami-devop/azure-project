@@ -37,9 +37,7 @@ steps:
       versionPublish: '$(version)'
       packagePublishDescription: 'HelloWorld application'
 
-  # DEVELOP: Prepare SonarQube
-  - task: SonarCloudPrepare@4
-    displayName: Prepare SonarQube
+  - task: SonarCloudPrepare@4.4.0
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
     inputs:
       SonarCloud: 'sonarqube'
@@ -47,29 +45,14 @@ steps:
       scannerMode: 'dotnet'
       projectKey: 'ihatami-devop_azure-project'
 
-  # DEVELOP: Run SonarQube analysis
-  - task: SonarCloudAnalyze@4
+    # Execute SonarQube analysis
+  - task: SonarCloudAnalyze@4.4.0
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
     displayName: Run SonarQube analysis
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
 
-  # DEVELOP: Publish Quality Gate
-  - task: SonarCloudPublish@4
-    displayName: Publish Quality Gate
+  # Publish Quality Gate result
+  - task: SonarCloudPublish@4.4.0
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    displayName: Publish Quality Gate
     inputs:
       pollingTimeoutSec: '300'
-
-  # DEVELOP: Generate NuGet package
-  - script: dotnet pack HelloWorld/HelloWorld.csproj -c Release --no-build -p:PackageVersion=$(version) -o $(Build.ArtifactStagingDirectory)
-    displayName: Generate NuGet package
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-
-  # DEVELOP: Publish NuGet package
-  - task: NuGetCommand@2
-    displayName: Publish NuGet package
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-    inputs:
-      command: push
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
-      nuGetFeedType: internal
-      publishVstsFeed: 'Azure Project/helloworld-feed'
