@@ -9,6 +9,14 @@ variables:
   version: '1.0.$(Build.BuildId)'
 
 steps:
+  - task: SonarCloudPrepare@4.4.0
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    inputs:
+      SonarCloud: 'sonarqube'
+      organization: 'ihatami-devop'
+      scannerMode: 'dotnet'
+      projectKey: 'ihatami-devop_azure-project'
+      
   - script: dotnet restore HelloWorld/HelloWorld.csproj
     displayName: Install dependencies
 
@@ -36,14 +44,6 @@ steps:
       versionOption: custom
       versionPublish: '$(version)'
       packagePublishDescription: 'HelloWorld application'
-
-  - task: SonarCloudPrepare@4.4.0
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-    inputs:
-      SonarCloud: 'sonarqube'
-      organization: 'ihatami-devop'
-      scannerMode: 'dotnet'
-      projectKey: 'ihatami-devop_azure-project'
 
     # Execute SonarQube analysis
   - task: SonarCloudAnalyze@4.4.0
