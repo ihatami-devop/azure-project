@@ -10,6 +10,12 @@ variables:
   artifactName: '$(Build.SourceBranchName)_$(version)'
 
 steps:
+    # Static testing
+  - script: |
+      set -eou pipefail
+      dotnet format HelloWorld/HelloWorld.csproj --verify-no-changes --no-restore
+    displayName: Fast static code formatting check
+
   - task: SonarCloudPrepare@4.4.0
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
     inputs:
@@ -26,7 +32,7 @@ steps:
   - script: dotnet build HelloWorld/HelloWorld.csproj -c Release
     displayName: Build HelloWorld
 
-    # DEVELOP: Run tests and generate coverage
+    # Run tests and generate coverage
   - script: |
       dotnet test HelloWorld.Tests/HelloWorld.Tests.csproj \
         -c Release \
