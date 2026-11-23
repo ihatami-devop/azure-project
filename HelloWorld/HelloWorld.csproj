@@ -5,6 +5,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
 
+    <PackageId>HelloWorld</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Ilay</Authors>
+    <Description>HelloWorld application package</Description>
+  </PropertyGroup>
+  
 </Project>

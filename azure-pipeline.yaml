@@ -1,5 +1,6 @@
 trigger:
   - main
+  - develop
 
 pool:
   vmImage: ubuntu-latest
@@ -8,20 +9,22 @@ variables:
   version: '1.0.$(Build.BuildId)'
 
 steps:
-  - script: dotnet restore HelloWorld/HelloWorld.csproj
-    displayName: Install dependencies
+  - script: dotnet restore HelloWorld.sln
+    displayName: Donwload dependencies
 
-  - script: dotnet build HelloWorld/HelloWorld.csproj
+  # Build application
+  - script: dotnet build HelloWorld.sln
     displayName: Build HelloWorld
 
+  # MAIN: Publish application
   - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
     displayName: Publish application
-        
-  - script: 'echo "Application version: $(version)"'
-    displayName: Print application version
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
 
+  # MAIN: Publish Universal Package
   - task: UniversalPackages@0
-    displayName: Upload to Azure Artifacts
+    displayName: Upload Universal Package
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     inputs:
       command: publish
       publishDirectory: '$(Build.ArtifactStagingDirectory)'
@@ -31,3 +34,40 @@ steps:
       versionOption: custom
       versionPublish: '$(version)'
       packagePublishDescription: 'HelloWorld application'
+
+  # DEVELOP: Prepare SonarQube
+  - task: SonarCloudPrepare@4
+    displayName: Prepare SonarQube
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    inputs:
+      SonarCloud: 'sonarqube'
+      organization: 'ihatami-devop'
+      scannerMode: 'dotnet'
+      projectKey: 'ihatami-devop_azure-project'
+
+  # DEVELOP: Run SonarQube analysis
+  - task: SonarCloudAnalyze@4
+    displayName: Run SonarQube analysis
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+
+  # DEVELOP: Publish Quality Gate
+  - task: SonarCloudPublish@4
+    displayName: Publish Quality Gate
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    inputs:
+      pollingTimeoutSec: '300'
+
+  # DEVELOP: Generate NuGet package
+  - script: dotnet pack HelloWorld/HelloWorld.csproj -c Release --no-build -p:PackageVersion=$(version) -o $(Build.ArtifactStagingDirectory)
+    displayName: Generate NuGet package
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+
+  # DEVELOP: Publish NuGet package
+  - task: NuGetCommand@2
+    displayName: Publish NuGet package
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    inputs:
+      command: push
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+      nuGetFeedType: internal
+      publishVstsFeed: 'Azure Project/helloworld-feed'
