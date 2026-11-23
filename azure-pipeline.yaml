@@ -20,7 +20,7 @@ steps:
   - script: dotnet restore HelloWorld/HelloWorld.csproj
     displayName: Install dependencies
 
-  - script: dotnet build HelloWorld/HelloWorld.csproj
+  - script: dotnet build HelloWorld/HelloWorld.csproj -c Release
     displayName: Build HelloWorld
 
   - script: dotnet publish HelloWorld/HelloWorld.csproj -c Release -o $(Build.ArtifactStagingDirectory)
@@ -56,3 +56,16 @@ steps:
     displayName: Publish Quality Gate
     inputs:
       pollingTimeoutSec: '300'
+
+  - script: dotnet pack HelloWorld/HelloWorld.csproj -c Release --no-build -p:PackageVersion=$(version) -o $(Build.ArtifactStagingDirectory)
+    displayName: Generate NuGet package
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  
+  - task: NuGetCommand@2
+    displayName: Publish NuGet package
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    inputs:
+      command: push
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+      nuGetFeedType: internal
+      publishVstsFeed: 'Azure Project/helloworld-feed'
